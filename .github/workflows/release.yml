@@ -54,7 +54,7 @@ jobs:
       - name: Provide build artifact as ZIP file
         if: ${{ steps.get_next_version.outputs.hasNextVersion == 'true' }}
         run: |
-          mv ./dist ./${{ github.event.repository.name }}-${{steps.get_next_version.outputs.version}}
+          cp -r ./dist ./${{ github.event.repository.name }}-${{steps.get_next_version.outputs.version}}
           zip -r ${{ github.event.repository.name }}-${{steps.get_next_version.outputs.version}}.zip ./${{ github.event.repository.name }}-${{steps.get_next_version.outputs.version}}
 
       - name: Release new version
@@ -68,7 +68,7 @@ jobs:
         if: ${{ steps.get_next_version.outputs.hasNextVersion == 'true' }}
         uses: actions/upload-pages-artifact@v3
         with:
-          path: ./${{ github.event.repository.name }}-${{steps.get_next_version.outputs.version}}
+          path: dist
 
       - name: Deploy to Github Pages
         if: ${{ steps.get_next_version.outputs.hasNextVersion == 'true' }}
