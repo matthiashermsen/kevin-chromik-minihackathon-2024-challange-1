@@ -1,0 +1,77 @@
+name: Release
+
+on:
+  push:
+    branches:
+      - 'main'
+
+permissions: write-all
+
+jobs:
+  release:
+    name: Release
+    runs-on: ubuntu-latest
+
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get next version
+        id: get_next_version
+        uses: thenativeweb/get-next-version@2.6.2
+
+      - name: Setup Node
+        if: ${{ steps.get_next_version.outputs.hasNextVersion == 'true' }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.x
+
+      - name: Install dependencies
+        if: ${{ steps.get_next_version.outputs.hasNextVersion == 'true' }}
+        run: npm install
+
+      - name: Create new version
+        if: ${{ steps.get_next_version.outputs.hasNextVersion == 'true' }}
+        run: |
+          npm version --no-git-tag-version ${{steps.get_next_version.outputs.version}}
+          git config user.name github-actions
+          git config user.email github-actions@github.com
+          git add .
+          git commit -m "chore: bump package version to ${{steps.get_next_version.outputs.version}} [skip ci]"
+          git push
+          git tag ${{steps.get_next_version.outputs.version}}
+          git push origin ${{steps.get_next_version.outputs.version}}
+
+      - name: Build the application
+        run: npm run build
+
+      - name: Provide build artifact as ZIP file
+        if: ${{ steps.get_next_version.outputs.hasNextVersion == 'true' }}
+        run: |
+          mv ./dist ./${{ github.event.repository.name }}-${{steps.get_next_version.outputs.version}}
+          zip -r ${{ github.event.repository.name }}-${{steps.get_next_version.outputs.version}}.zip ./${{ github.event.repository.name }}-${{steps.get_next_version.outputs.version}}
+
+      - name: Release new version
+        if: ${{ steps.get_next_version.outputs.hasNextVersion == 'true' }}
+        uses: ncipollo/release-action@v1
+        with:
+          tag: ${{ steps.get_next_version.outputs.version }}
+          artifacts: "./${{ github.event.repository.name }}-${{steps.get_next_version.outputs.version}}.zip"
+
+      - name: Upload build as artifact for Github Pages
+        if: ${{ steps.get_next_version.outputs.hasNextVersion == 'true' }}
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: ./${{ github.event.repository.name }}-${{steps.get_next_version.outputs.version}}
+
+      - name: Deploy to Github Pages
+        if: ${{ steps.get_next_version.outputs.hasNextVersion == 'true' }}
+        uses: actions/deploy-pages@v4
+        with:
+          token: ${{ github.token }}
