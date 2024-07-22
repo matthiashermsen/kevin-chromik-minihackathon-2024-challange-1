@@ -6,7 +6,7 @@ export default defineConfig({
 	html: {
 		title: "Kevin Chromik Minihackathon 2024 Challenge 1",
 	},
-  	output: {
-		publicPath: '.',
+	output: {
+		publicPath: ".",
 	},
 });
